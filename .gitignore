@@ -1,0 +1,91 @@
+## .NET / ASP.NET Core
+
+# Build outputs
+bin/
+obj/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Visual Studio
+.vs/
+*.vspx
+*.vspscc
+*_i.c
+*_p.c
+*.ilk
+*.meta
+*.obj
+*.iobj
+*.pch
+*.pdb
+*.ipdb
+*.pgc
+*.pgd
+*.rsp
+*.sbr
+*.tlb
+*.tlo
+*.tlh
+*.tmp_proj
+*_wpftmp.csproj
+
+# Rider / JetBrains
+.idea/
+*.sln.iml
+
+# VS Code
+.vscode/
+
+# NuGet
+*.nupkg
+*.snupkg
+**/packages/
+nuget.config
+!**/[Pp]ackages/build/
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# Publish output
+publish/
+**/publish/
+
+# Entity Framework
+# (migrations are committed, but not the model snapshot if auto-generated)
+
+## Secrets & Configuration
+
+# User secrets (managed by dotnet user-secrets)
+secrets.json
+appsettings.Local.json
+appsettings.*.Local.json
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+## OS
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+
+## Logs
+
+*.log
+logs/
