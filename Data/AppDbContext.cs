@@ -19,6 +19,8 @@ namespace Crypto.Data
         {
             base.OnModelCreating(modelBuilder);
 
+            
+
             modelBuilder.Entity<Usuario>(entity =>
             {
                // definir id como pk
@@ -67,7 +69,7 @@ namespace Crypto.Data
 
                 entity.HasOne(s => s.Carteira).WithMany(s => s.Saldos).HasForeignKey(s => s.CarteiraId);
 
-                entity.HasOne(s => s.Moeda).WithOne().HasForeignKey<SaldoCripto>(s => s.MoedaId);
+                entity.HasOne(s => s.Moeda).WithOne( m => m.SaldoCripto).HasForeignKey<SaldoCripto>(s => s.MoedaId);
                 
             });
 
