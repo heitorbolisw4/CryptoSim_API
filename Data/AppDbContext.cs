@@ -14,6 +14,7 @@ namespace Crypto.Data
         public DbSet<Moeda> Moedas { get; set; }
         public DbSet<Carteira> Carteiras { get; set; }
         public DbSet<SaldoCripto> SaldoCriptos { get; set; }
+        public DbSet<TransacaoFiat> Transacoes { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -46,7 +47,7 @@ namespace Crypto.Data
 
                 entity.HasIndex(c => c.UsuarioId).IsUnique();
 
-                entity.Property(c => c.UsuarioId).IsRequired(); 
+                entity.Property(c => c.UsuarioId).IsRequired().HasDefaultValue(null); 
 
                 entity.HasOne(c => c.Usuario).WithOne(c => c.Carteira).HasForeignKey<Carteira>(c => c.UsuarioId);
 
@@ -71,6 +72,12 @@ namespace Crypto.Data
 
                 entity.HasOne(s => s.Moeda).WithOne( m => m.SaldoCripto).HasForeignKey<SaldoCripto>(s => s.MoedaId);
                 
+            });
+
+            modelBuilder.Entity<TransacaoFiat>(entity =>
+            {
+                entity.HasKey(t => t.Id);
+                entity.HasOne(t => t.Carteira).WithMany(t => t.TransacaoFiat).HasForeignKey(t => t.CarteiraId);
             });
 
             

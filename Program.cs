@@ -111,7 +111,16 @@ app.MapPost("/register", async (AppDbContext db, UserRegisterRequestDto request,
         Ativo = true
     };
 
+    // crio a carteira
+
     await db.Usuarios.AddAsync(user);
+    Carteira carteira = new Carteira
+    {
+      Id = Guid.NewGuid(),
+      UsuarioId = user.Id,
+      DataCriacao = DateTime.UtcNow  
+    };
+    await db.Carteiras.AddAsync(carteira);
     await db.SaveChangesAsync();
 
     return Results.Created();
@@ -149,6 +158,79 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+
+//definir um mapgroup
+var users = app.MapGroup("/me").RequireAuthorization();
+
+users.MapPost("/transacao", async (Guid id, TransacaoFiatRegisterDto request, AppDbContext db, ClaimsPrincipal user) =>
+{
+    if(string.IsNullOrEmpty(request.Tipo) || request.Valor == 0)
+        return Results.BadRequest("Todos os campos devem ser preenchidos");
+
+    //pego o claim
+    var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+    // identifico o user
+    if(string.IsNullOrWhiteSpace(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+        return Results.Unauthorized();
+
+    // identifica carteira
+    var carteira = await db.Carteiras.FirstOrDefaultAsync(c => c.UsuarioId == userId);
+
+    if(carteira == null)
+        return Results.BadRequest();
+
+    TransacaoFiat transacao = new TransacaoFiat
+    {
+        Id = Guid.NewGuid(),
+        CarteiraId = carteira.Id,
+        Tipo = request.Tipo,
+        Valor = request.Valor,
+        DataHora = DateTime.UtcNow,
+        Status = "Pendente"
+        
+
+    };
+    db.Transacoes.Add(transacao);
+    await db.SaveChangesAsync();
+    return Results.Created();
+
+});
+
+users.MapPatch("/transacao/pagamento", async (Guid id, AppDbContext db, ClaimsPrincipal user, PagamentoTransacaoRequestDto request) =>
+{
+    if(string.IsNullOrWhiteSpace(request.Status))
+        return Results.BadRequest("Deve informar um status valido ex: Concluido/Cancelado");
+
+    var userIdClaim = user.FindFirstValue(ClaimTypes.NameIdentifier);
+
+    if(string.IsNullOrWhiteSpace(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+        return Results.Unauthorized();
+
+    //identifico a carteira
+    var carteira = await db.Carteiras.FirstOrDefaultAsync(c => c.UsuarioId == userId);
+
+    if(carteira == null)
+        return Results.BadRequest();
+    //identifico a transacao
+    var transacao = await db.Transacoes.FirstOrDefaultAsync( t => t.Id == id && t.CarteiraId == carteira.Id);
+
+    if(transacao == null)
+        return Results.BadRequest();
+
+    transacao.Status = request.Status;
+    await db.SaveChangesAsync();
+
+    if(transacao.Status == "Aprovado")
+    {
+        carteira.SaldoBrl += transacao.Valor;
+    }
+    await db.SaveChangesAsync();
+    return Results.Ok();
+
+    
+});
 
 
 app.UseAuthentication();
