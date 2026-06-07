@@ -159,7 +159,16 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.MapGet("/coins", async (AppDbContext db) =>
+{
+   var moedas = await db.Moedas.Where(m => m.Ativo == true).Select(m => new MoedaResponseDto
+   {
+       Simbolo = m.Simbolo,
+       Nome = m.Nome
+   }).ToListAsync();
 
+   return Results.Ok(moedas);
+});
 //definir um mapgroup
 var users = app.MapGroup("/me").RequireAuthorization();
 

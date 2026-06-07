@@ -5,7 +5,8 @@ namespace Crypto.Entities
         public int Id { get; set; }
         public string Simbolo { get; set; } = string.Empty;
         public string Nome { get; set; } = string.Empty;
-        public SaldoCripto? SaldoCripto { get; set; }
         public bool Ativo { get; set; }
+        public List<SaldoCripto>? SaldoCripto { get; set; }
+        public List<Cotacao>? Cotacoes { get; set; }
     }
 }

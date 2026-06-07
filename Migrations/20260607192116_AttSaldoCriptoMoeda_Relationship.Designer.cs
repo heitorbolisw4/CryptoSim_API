@@ -3,6 +3,7 @@ using System;
 using Crypto.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Crypto.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260607192116_AttSaldoCriptoMoeda_Relationship")]
+    partial class AttSaldoCriptoMoeda_Relationship
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -45,28 +48,6 @@ namespace Crypto.Migrations
                     b.ToTable("Carteiras");
                 });
 
-            modelBuilder.Entity("Crypto.Entities.Cotacao", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("DataHora")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("MoedaId")
-                        .HasColumnType("integer");
-
-                    b.Property<decimal>("PrecoBrl")
-                        .HasColumnType("numeric");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("MoedaId");
-
-                    b.ToTable("Cotacoes");
-                });
-
             modelBuilder.Entity("Crypto.Entities.Moeda", b =>
                 {
                     b.Property<int>("Id")
@@ -93,36 +74,6 @@ namespace Crypto.Migrations
                         .IsUnique();
 
                     b.ToTable("Moedas");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            Ativo = true,
-                            Nome = "Bitcoin",
-                            Simbolo = "BTC"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            Ativo = true,
-                            Nome = "Etherium",
-                            Simbolo = "ETH"
-                        },
-                        new
-                        {
-                            Id = 3,
-                            Ativo = true,
-                            Nome = "Monero",
-                            Simbolo = "MON"
-                        },
-                        new
-                        {
-                            Id = 4,
-                            Ativo = true,
-                            Nome = "Solana",
-                            Simbolo = "SOL"
-                        });
                 });
 
             modelBuilder.Entity("Crypto.Entities.SaldoCripto", b =>
@@ -230,17 +181,6 @@ namespace Crypto.Migrations
                     b.Navigation("Usuario");
                 });
 
-            modelBuilder.Entity("Crypto.Entities.Cotacao", b =>
-                {
-                    b.HasOne("Crypto.Entities.Moeda", "Moeda")
-                        .WithMany("Cotacoes")
-                        .HasForeignKey("MoedaId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Moeda");
-                });
-
             modelBuilder.Entity("Crypto.Entities.SaldoCripto", b =>
                 {
                     b.HasOne("Crypto.Entities.Carteira", "Carteira")
@@ -278,8 +218,6 @@ namespace Crypto.Migrations
 
             modelBuilder.Entity("Crypto.Entities.Moeda", b =>
                 {
-                    b.Navigation("Cotacoes");
-
                     b.Navigation("SaldoCripto");
                 });
 

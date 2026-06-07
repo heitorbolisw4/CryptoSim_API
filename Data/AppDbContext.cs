@@ -15,12 +15,12 @@ namespace Crypto.Data
         public DbSet<Carteira> Carteiras { get; set; }
         public DbSet<SaldoCripto> SaldoCriptos { get; set; }
         public DbSet<TransacaoFiat> Transacoes { get; set; }
+        public DbSet<Cotacao> Cotacoes { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-
-            
+        
 
             modelBuilder.Entity<Usuario>(entity =>
             {
@@ -38,8 +38,6 @@ namespace Crypto.Data
                entity.Property(u => u.Ativo).IsRequired();
 
             });
-
-
 
             modelBuilder.Entity<Carteira>(entity =>
             {
@@ -62,6 +60,14 @@ namespace Crypto.Data
                 entity.Property(m => m.Nome).HasMaxLength(150);
 
                 entity.Property(m => m.Ativo).IsRequired();
+
+                entity.HasData( 
+                    new Moeda {Id = 1, Simbolo = "BTC", Nome = "Bitcoin", Ativo = true},
+                    new Moeda {Id = 2, Simbolo = "ETH", Nome = "Etherium", Ativo = true},
+                    new Moeda {Id = 3, Simbolo = "MON", Nome = "Monero", Ativo = true},
+                    new Moeda {Id = 4, Simbolo = "SOL", Nome = "Solana", Ativo = true}            
+                );
+
             });
 
             modelBuilder.Entity<SaldoCripto>(entity =>
@@ -70,7 +76,7 @@ namespace Crypto.Data
 
                 entity.HasOne(s => s.Carteira).WithMany(s => s.Saldos).HasForeignKey(s => s.CarteiraId);
 
-                entity.HasOne(s => s.Moeda).WithOne( m => m.SaldoCripto).HasForeignKey<SaldoCripto>(s => s.MoedaId);
+                entity.HasOne(s => s.Moeda).WithMany( m => m.SaldoCripto).HasForeignKey(s => s.MoedaId);
                 
             });
 
@@ -78,6 +84,12 @@ namespace Crypto.Data
             {
                 entity.HasKey(t => t.Id);
                 entity.HasOne(t => t.Carteira).WithMany(t => t.TransacaoFiat).HasForeignKey(t => t.CarteiraId);
+            });
+
+            modelBuilder.Entity<Cotacao>(entity =>
+            {
+                entity.HasKey( c => c.Id);
+                entity.HasOne( c => c.Moeda).WithMany(c => c.Cotacoes).HasForeignKey(m => m.MoedaId);
             });
 
             
