@@ -6,6 +6,7 @@ namespace Crypto.Entities
         public string Simbolo { get; set; } = string.Empty;
         public string Nome { get; set; } = string.Empty;
         public bool Ativo { get; set; }
+        public string CoinGeckoId { get; set; } = string.Empty;
         public List<SaldoCripto>? SaldoCripto { get; set; }
         public List<Cotacao>? Cotacoes { get; set; }
     }

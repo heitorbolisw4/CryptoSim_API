@@ -45,8 +45,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
 builder.Services.AddAuthorization();
 
 
-
+builder.Services.AddHttpClient<CoinGeckoService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<ICoinGeckoService, CoinGeckoService>();
 builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
 
 builder.Services.AddEndpointsApiExplorer();
@@ -169,6 +170,7 @@ app.MapGet("/coins", async (AppDbContext db) =>
 
    return Results.Ok(moedas);
 });
+
 //definir um mapgroup
 var users = app.MapGroup("/me").RequireAuthorization();
 

@@ -62,10 +62,10 @@ namespace Crypto.Data
                 entity.Property(m => m.Ativo).IsRequired();
 
                 entity.HasData( 
-                    new Moeda {Id = 1, Simbolo = "BTC", Nome = "Bitcoin", Ativo = true},
-                    new Moeda {Id = 2, Simbolo = "ETH", Nome = "Etherium", Ativo = true},
-                    new Moeda {Id = 3, Simbolo = "MON", Nome = "Monero", Ativo = true},
-                    new Moeda {Id = 4, Simbolo = "SOL", Nome = "Solana", Ativo = true}            
+                    new Moeda {Id = 1, CoinGeckoId = "bitcoin", Simbolo = "BTC", Nome = "Bitcoin", Ativo = true},
+                    new Moeda {Id = 2, CoinGeckoId = "etherium", Simbolo = "ETH", Nome = "Etherium", Ativo = true},
+                    new Moeda {Id = 3,  CoinGeckoId = "monero", Simbolo = "MON", Nome = "Monero", Ativo = true},
+                    new Moeda {Id = 4,  CoinGeckoId = "solana", Simbolo = "SOL", Nome = "Solana", Ativo = true}            
                 );
 
             });
