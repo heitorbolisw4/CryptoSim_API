@@ -63,7 +63,7 @@ namespace Crypto.Data
 
                 entity.HasData( 
                     new Moeda {Id = 1, CoinGeckoId = "bitcoin", Simbolo = "BTC", Nome = "Bitcoin", Ativo = true},
-                    new Moeda {Id = 2, CoinGeckoId = "etherium", Simbolo = "ETH", Nome = "Etherium", Ativo = true},
+                    new Moeda {Id = 2, CoinGeckoId = "ethereum", Simbolo = "ETH", Nome = "Ethereum", Ativo = true},
                     new Moeda {Id = 3,  CoinGeckoId = "monero", Simbolo = "MON", Nome = "Monero", Ativo = true},
                     new Moeda {Id = 4,  CoinGeckoId = "solana", Simbolo = "SOL", Nome = "Solana", Ativo = true}            
                 );

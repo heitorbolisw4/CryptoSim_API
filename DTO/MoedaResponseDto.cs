@@ -4,5 +4,6 @@ namespace Crypto.DTO
     {
         public string Simbolo { get; set; } = string.Empty;
         public string Nome { get; set; } = string.Empty;
+        public decimal PrecoBrl { get; set; }
     }
 }

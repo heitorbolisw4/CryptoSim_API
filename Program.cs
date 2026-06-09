@@ -160,12 +160,16 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.MapGet("/coins", async (AppDbContext db) =>
+app.MapGet("/coins", async (AppDbContext db, ICoinGeckoService coinService) =>
 {
+    await coinService.AtualizarCotacoesAsync();
    var moedas = await db.Moedas.Where(m => m.Ativo == true).Select(m => new MoedaResponseDto
    {
        Simbolo = m.Simbolo,
-       Nome = m.Nome
+       Nome = m.Nome,
+       PrecoBrl  = m.Cotacoes!.OrderByDescending(c => c.DataHora)
+       .Select(c => c.PrecoBrl)
+       .FirstOrDefault()
    }).ToListAsync();
 
    return Results.Ok(moedas);

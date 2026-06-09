@@ -19,6 +19,8 @@ namespace Crypto.Service
             _httpClient = httpClient;
             _config = config;
             _db = db;
+            _url = config["CoinGecko:BaseUrl"]!;
+            _apikey = config["CoinGecko:ApiKey"]!;
         }
 
         public async Task AtualizarCotacoesAsync()
