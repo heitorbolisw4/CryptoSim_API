@@ -222,6 +222,31 @@ user.MapPatch("/perfil", async (PerfilUserRequestDto request, AppDbContext db, C
     return Results.Ok();
 });
 
+user.MapPut("/perfil/email", async (PerfilUserRequestDto request, AppDbContext db, ClaimsPrincipal user) =>
+{
+    var userIdClaim = user.FindFirstValue(ClaimTypes.NameIdentifier);
+
+    if (string.IsNullOrWhiteSpace(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+        return Results.Unauthorized();
+
+    if (string.IsNullOrWhiteSpace(request.Email))
+        return Results.BadRequest("Email é obrigatório");
+
+    var usuario = await db.Usuarios.FirstOrDefaultAsync(u => u.Id == userId);
+
+    if (usuario == null)
+        return Results.NotFound();
+
+    bool emailEmUso = await db.Usuarios.AnyAsync(u => u.Email == request.Email && u.Id != userId);
+    if (emailEmUso)
+        return Results.BadRequest("Email já está em uso");
+
+    usuario.Email = request.Email;
+
+    await db.SaveChangesAsync();
+    return Results.Ok();
+});
+
 user.MapDelete("/perfil", async (AppDbContext db, ClaimsPrincipal user) =>
 {
     var userIdClaim = user.FindFirstValue(ClaimTypes.NameIdentifier);
