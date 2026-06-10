@@ -3,6 +3,7 @@ using System;
 using Crypto.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Crypto.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260610095843_AddOrdem")]
+    partial class AddOrdem
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -65,33 +68,6 @@ namespace Crypto.Migrations
                     b.HasIndex("MoedaId");
 
                     b.ToTable("Cotacoes");
-                });
-
-            modelBuilder.Entity("Crypto.Entities.LogOperacao", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("DataHora")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Descricao")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Evento")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("UsuarioId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UsuarioId");
-
-                    b.ToTable("LogOperacoes");
                 });
 
             modelBuilder.Entity("Crypto.Entities.Moeda", b =>
@@ -167,9 +143,6 @@ namespace Crypto.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("CarteiraId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("CompradorCarteiraId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("DataHora")
@@ -315,15 +288,6 @@ namespace Crypto.Migrations
                         .IsRequired();
 
                     b.Navigation("Moeda");
-                });
-
-            modelBuilder.Entity("Crypto.Entities.LogOperacao", b =>
-                {
-                    b.HasOne("Crypto.Entities.Usuario", null)
-                        .WithMany()
-                        .HasForeignKey("UsuarioId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("Crypto.Entities.Ordem", b =>
