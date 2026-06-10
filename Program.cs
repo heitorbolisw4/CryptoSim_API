@@ -513,6 +513,84 @@ ordens.MapPatch("/{ordemId:guid}/cancelar", async (Guid ordemId, AppDbContext db
     await db.SaveChangesAsync();
     return Results.Ok();
 });
+
+ordens.MapDelete("/{ordemId:guid}", async (Guid ordemId, AppDbContext db, ClaimsPrincipal user) =>
+{
+    var userIdClaim = user.FindFirstValue(ClaimTypes.NameIdentifier);
+
+    if (string.IsNullOrWhiteSpace(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+        return Results.Unauthorized();
+
+    var carteiraVendedor = await db.Carteiras.FirstOrDefaultAsync(c => c.UsuarioId == userId);
+
+    if (carteiraVendedor == null)
+        return Results.NotFound("Carteira não encontrada");
+
+    var ordem = await db.Ordens.FirstOrDefaultAsync(o => o.Id == ordemId && o.CarteiraId == carteiraVendedor.Id && o.Status == "postada");
+
+    if (ordem == null)
+        return Results.NotFound("Ordem não encontrada ou não pode ser excluída");
+
+    var saldoCripto = await db.SaldoCriptos.FirstOrDefaultAsync(s => s.CarteiraId == carteiraVendedor.Id && s.MoedaId == ordem.MoedaId);
+
+    if (saldoCripto == null)
+        db.SaldoCriptos.Add(new SaldoCripto { CarteiraId = carteiraVendedor.Id, MoedaId = ordem.MoedaId, Quantidade = ordem.Quantidade });
+    else
+        saldoCripto.Quantidade += ordem.Quantidade;
+
+    db.Ordens.Remove(ordem);
+
+    await db.SaveChangesAsync();
+    return Results.NoContent();
+});
+
+ordens.MapPut("/{ordemId:guid}/editar", async (Guid ordemId, OrdemEditRequestDto request, AppDbContext db, ClaimsPrincipal user) =>
+{
+    var userIdClaim = user.FindFirstValue(ClaimTypes.NameIdentifier);
+
+    if (string.IsNullOrWhiteSpace(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+        return Results.Unauthorized();
+
+    if (request.Quantidade <= 0)
+        return Results.BadRequest("Quantidade deve ser maior que zero");
+
+    var carteiraVendedor = await db.Carteiras.FirstOrDefaultAsync(c => c.UsuarioId == userId);
+
+    if (carteiraVendedor == null)
+        return Results.NotFound("Carteira não encontrada");
+
+    var ordem = await db.Ordens.FirstOrDefaultAsync(o => o.Id == ordemId && o.CarteiraId == carteiraVendedor.Id && o.Status == "postada");
+
+    if (ordem == null)
+        return Results.NotFound("Ordem não encontrada ou não pode ser editada");
+
+    var saldoCripto = await db.SaldoCriptos.FirstOrDefaultAsync(s => s.CarteiraId == carteiraVendedor.Id && s.MoedaId == ordem.MoedaId);
+
+    if (saldoCripto == null)
+        return Results.BadRequest("Saldo cripto não encontrado");
+
+    var diferenca = request.Quantidade - ordem.Quantidade;
+
+    if (diferenca > 0 && saldoCripto.Quantidade < diferenca)
+        return Results.BadRequest("Saldo de cripto insuficiente para aumentar a quantidade");
+
+    saldoCripto.Quantidade -= diferenca;
+
+    var cotacao = await db.Cotacoes
+        .Where(c => c.MoedaId == ordem.MoedaId)
+        .OrderByDescending(c => c.DataHora)
+        .FirstOrDefaultAsync();
+
+    if (cotacao == null)
+        return Results.BadRequest("Cotação não encontrada");
+
+    ordem.Quantidade = request.Quantidade;
+    ordem.PrecoUnitarioBrl = cotacao.PrecoBrl;
+
+    await db.SaveChangesAsync();
+    return Results.Ok();
+});
+
 ordens.MapPost("/venda/{id:guid}", async (Guid id, OrdemRequestDto request, AppDbContext db, ClaimsPrincipal user) =>
 {
     var userIdClaim = user.FindFirstValue(ClaimTypes.NameIdentifier);
