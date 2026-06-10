@@ -94,10 +94,37 @@ EXECUTE FUNCTION fn_registrar_log_ordem();
 
 ---
 
-## View — sugestão
+## View — `vw_book_ordens`
 
-`vw_book_ordens` — visão do livro de ordens com nome da moeda e saldo disponível.
+**Por que usar:**
+O comprador precisa visualizar as ordens disponíveis com informações legíveis — nome da moeda, preço e quantidade. Em vez de fazer JOIN na aplicação toda vez, a View encapsula essa consulta no banco.
 
-## Function — sugestão
+```sql
+CREATE OR REPLACE VIEW vw_book_ordens AS
+SELECT
+    o."Id",
+    o."CarteiraId",
+    m."Nome" AS "Moeda",
+    m."Simbolo",
+    o."Quantidade",
+    o."PrecoUnitarioBrl",
+    o."Quantidade" * o."PrecoUnitarioBrl" AS "ValorTotal",
+    o."DataHora"
+FROM "Ordens" o
+JOIN "Moedas" m ON m."Id" = o."MoedaId"
+WHERE o."Status" = 'postada' AND o."Tipo" = 'Venda';
+```
 
-`fn_registrar_log_ordem` já é a function utilizada pelo trigger acima, cumprindo o requisito.
+**Como usar pela API (C#):**
+```csharp
+var ordens = await db.Database
+    .SqlQueryRaw<OrdemResponseDto>("SELECT * FROM vw_book_ordens")
+    .ToListAsync();
+```
+
+---
+
+## Function — `fn_registrar_log_ordem`
+
+`fn_registrar_log_ordem` é a function utilizada pelo trigger acima, cumprindo o requisito.
+Funções no PostgreSQL são obrigatórias para triggers — o trigger chama a function, a function executa a lógica.

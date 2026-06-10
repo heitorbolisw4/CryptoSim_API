@@ -375,33 +375,8 @@ ordens.MapPatch("/{ordemId:guid}/aprovar", async (Guid ordemId, AppDbContext db,
     if (ordem == null)
         return Results.NotFound("Ordem não encontrada ou não pertence a você");
 
-    var carteiraComprador = await db.Carteiras.FirstOrDefaultAsync(c => c.Id == ordem.CompradorCarteiraId);
+    await db.Database.ExecuteSqlRawAsync("CALL sp_aprovar_ordem({0})", ordemId);
 
-    if (carteiraComprador == null)
-        return Results.BadRequest("Comprador não encontrado");
-
-    carteiraVendedor.SaldoBrl += ordem.Quantidade * ordem.PrecoUnitarioBrl;
-
-    var saldoCriptoComprador = await db.SaldoCriptos
-        .FirstOrDefaultAsync(s => s.CarteiraId == carteiraComprador.Id && s.MoedaId == ordem.MoedaId);
-
-    if (saldoCriptoComprador == null)
-    {
-        db.SaldoCriptos.Add(new SaldoCripto
-        {
-            CarteiraId = carteiraComprador.Id,
-            MoedaId = ordem.MoedaId,
-            Quantidade = ordem.Quantidade
-        });
-    }
-    else
-    {
-        saldoCriptoComprador.Quantidade += ordem.Quantidade;
-    }
-
-    ordem.Status = "aprovada";
-
-    await db.SaveChangesAsync();
     return Results.Ok();
 });
 
