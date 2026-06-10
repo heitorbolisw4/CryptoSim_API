@@ -177,6 +177,68 @@ app.MapGet("/coins", async (AppDbContext db, ICoinGeckoService coinService) =>
 
 var transacoes = app.MapGroup("/transacoes").RequireAuthorization().WithTags("Transacoes");
 var ordens = app.MapGroup("/ordens").RequireAuthorization().WithTags("Ordens");
+var user = app.MapGroup("/me").RequireAuthorization().WithTags("Usuario");
+
+user.MapGet("/perfil", async (AppDbContext db, ClaimsPrincipal user) =>
+{
+    var userIdClaim = user.FindFirstValue(ClaimTypes.NameIdentifier);
+
+    if(string.IsNullOrWhiteSpace(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+        return Results.Unauthorized();
+
+    var perfil = await db.Usuarios.Where( u => u.Id == userId).Select(c => new UserResponseDto
+    {
+        Nome = c.Nome,
+        Email = c.Email
+    }).ToListAsync();
+    return Results.Ok(perfil);
+});
+
+user.MapPatch("/perfil", async (PerfilUserRequestDto request, AppDbContext db, ClaimsPrincipal user) =>
+{
+    var userIdClaim = user.FindFirstValue(ClaimTypes.NameIdentifier);
+
+    if (string.IsNullOrWhiteSpace(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+        return Results.Unauthorized();
+
+    var usuario = await db.Usuarios.FirstOrDefaultAsync(u => u.Id == userId);
+
+    if (usuario == null)
+        return Results.NotFound();
+
+    if (!string.IsNullOrWhiteSpace(request.Nome))
+        usuario.Nome = request.Nome;
+
+    if (!string.IsNullOrWhiteSpace(request.Email))
+    {
+        bool emailEmUso = await db.Usuarios.AnyAsync(u => u.Email == request.Email && u.Id != userId);
+        if (emailEmUso)
+            return Results.BadRequest("Email já está em uso");
+
+        usuario.Email = request.Email;
+    }
+
+    await db.SaveChangesAsync();
+    return Results.Ok();
+});
+
+user.MapDelete("/perfil", async (AppDbContext db, ClaimsPrincipal user) =>
+{
+    var userIdClaim = user.FindFirstValue(ClaimTypes.NameIdentifier);
+
+    if (string.IsNullOrWhiteSpace(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+        return Results.Unauthorized();
+
+    var usuario = await db.Usuarios.FirstOrDefaultAsync(u => u.Id == userId);
+
+    if (usuario == null)
+        return Results.NotFound();
+
+    usuario.Ativo = false;
+
+    await db.SaveChangesAsync();
+    return Results.NoContent();
+});
 
 transacoes.MapPost("/", async (Guid id, TransacaoFiatRegisterDto request, AppDbContext db, ClaimsPrincipal user) =>
 {
