@@ -178,6 +178,7 @@ app.MapGet("/coins", async (AppDbContext db, ICoinGeckoService coinService) =>
     await coinService.AtualizarCotacoesAsync();
    var moedas = await db.Moedas.Where(m => m.Ativo == true).Select(m => new MoedaResponseDto
    {
+       Id = m.Id,
        Simbolo = m.Simbolo,
        Nome = m.Nome,
        PrecoBrl  = m.Cotacoes!.OrderByDescending(c => c.DataHora)
@@ -805,6 +806,7 @@ carteiras.MapGet("/", async (AppDbContext db, ClaimsPrincipal user) =>
 
     var response = new CarteiraSaldoResponseDto
     {
+        Id = carteira.Id,
         SaldoBrl = carteira.SaldoBrl,
         Saldos = saldos
     };
