@@ -45,6 +45,16 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
 });
 builder.Services.AddAuthorization();
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("FrontEnd", policy =>
+    {
+        policy.WithOrigins("http://localhost:3000", "http://localhost:5173")
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
 
 builder.Services.AddHttpClient<CoinGeckoService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
@@ -80,6 +90,8 @@ builder.Services.AddSwaggerGen( options =>
 });
 
 var app = builder.Build();
+
+app.UseCors("FrontEnd");
 
 app.MapPost("/register", async (AppDbContext db, UserRegisterRequestDto request, IAuthService authService) =>
 {
