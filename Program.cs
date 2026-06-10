@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Claims;
 using System.Security.Cryptography.Xml;
 using System.Text;
@@ -175,8 +176,12 @@ app.MapGet("/coins", async (AppDbContext db, ICoinGeckoService coinService) =>
    return Results.Ok(moedas);
 });
 
+// cultura usada para formatar valores monetarios (R$) nos logs de operacao
+var ptBR = CultureInfo.GetCultureInfo("pt-BR");
+
 var transacoes = app.MapGroup("/transacoes").RequireAuthorization().WithTags("Transacoes");
 var ordens = app.MapGroup("/ordens").RequireAuthorization().WithTags("Ordens");
+var carteiras = app.MapGroup("/carteira").RequireAuthorization().WithTags("Carteira");
 var user = app.MapGroup("/me").RequireAuthorization().WithTags("Usuario");
 
 user.MapGet("/perfil", async (AppDbContext db, ClaimsPrincipal user) =>
@@ -265,7 +270,7 @@ user.MapDelete("/perfil", async (AppDbContext db, ClaimsPrincipal user) =>
     return Results.NoContent();
 });
 
-transacoes.MapPost("/", async (Guid id, TransacaoFiatRegisterDto request, AppDbContext db, ClaimsPrincipal user) =>
+transacoes.MapPost("/", async (TransacaoFiatRegisterDto request, AppDbContext db, ClaimsPrincipal user) =>
 {
     if(string.IsNullOrEmpty(request.Tipo) || request.Valor == 0)
         return Results.BadRequest("Todos os campos devem ser preenchidos");
@@ -295,9 +300,47 @@ transacoes.MapPost("/", async (Guid id, TransacaoFiatRegisterDto request, AppDbC
 
     };
     db.Transacoes.Add(transacao);
+
+    db.LogOperacoes.Add(new LogOperacao
+    {
+        Id = Guid.NewGuid(),
+        UsuarioId = userId,
+        Evento = "TransacaoFiat",
+        Descricao = $"Depósito de {request.Valor.ToString("C", ptBR)}",
+        DataHora = DateTime.UtcNow
+    });
+
     await db.SaveChangesAsync();
     return Results.Created();
 
+});
+
+transacoes.MapGet("/", async (AppDbContext db, ClaimsPrincipal user) =>
+{
+    var userIdClaim = user.FindFirstValue(ClaimTypes.NameIdentifier);
+
+    if (string.IsNullOrWhiteSpace(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+        return Results.Unauthorized();
+
+    var carteira = await db.Carteiras.FirstOrDefaultAsync(c => c.UsuarioId == userId);
+
+    if (carteira == null)
+        return Results.NotFound("Carteira não encontrada");
+
+    var minhasTransacoes = await db.Transacoes
+        .Where(t => t.CarteiraId == carteira.Id)
+        .OrderByDescending(t => t.DataHora)
+        .Select(t => new TransacaoFiatResponseDto
+        {
+            Id = t.Id,
+            Tipo = t.Tipo,
+            Valor = t.Valor,
+            Status = t.Status,
+            DataHora = t.DataHora
+        })
+        .ToListAsync();
+
+    return Results.Ok(minhasTransacoes);
 });
 
 transacoes.MapPatch("/{id:guid}/pagamento", async (Guid id, AppDbContext db, ClaimsPrincipal user, PagamentoTransacaoRequestDto request) =>
@@ -390,6 +433,17 @@ ordens.MapPost("/compra/corretora/{id:guid}", async (Guid id, OrdemRequestDto re
         DataHora = DateTime.UtcNow
     });
 
+    var moeda = await db.Moedas.FirstOrDefaultAsync(m => m.Id == request.MoedaId);
+
+    db.LogOperacoes.Add(new LogOperacao
+    {
+        Id = Guid.NewGuid(),
+        UsuarioId = userId,
+        Evento = "CompraCorretora",
+        Descricao = $"Compra de {request.Quantidade.ToString(CultureInfo.InvariantCulture)} {moeda?.Simbolo} por {custoTotal.ToString("C", ptBR)}",
+        DataHora = DateTime.UtcNow
+    });
+
     await db.SaveChangesAsync();
     return Results.Created();
 });
@@ -441,6 +495,17 @@ ordens.MapPost("/compra/{ordemId:guid}", async (Guid ordemId, AppDbContext db, C
     ordem.CompradorCarteiraId = carteira.Id;
     ordem.Status = "em transacao";
 
+    var moeda = await db.Moedas.FirstOrDefaultAsync(m => m.Id == ordem.MoedaId);
+
+    db.LogOperacoes.Add(new LogOperacao
+    {
+        Id = Guid.NewGuid(),
+        UsuarioId = userId,
+        Evento = "CompraP2P",
+        Descricao = $"Solicitação de compra P2P de {ordem.Quantidade.ToString(CultureInfo.InvariantCulture)} {moeda?.Simbolo}",
+        DataHora = DateTime.UtcNow
+    });
+
     await db.SaveChangesAsync();
     return Results.Ok();
 });
@@ -463,6 +528,17 @@ ordens.MapPatch("/{ordemId:guid}/aprovar", async (Guid ordemId, AppDbContext db,
         return Results.NotFound("Ordem não encontrada ou não pertence a você");
 
     await db.Database.ExecuteSqlRawAsync("CALL sp_aprovar_ordem({0})", ordemId);
+
+    db.LogOperacoes.Add(new LogOperacao
+    {
+        Id = Guid.NewGuid(),
+        UsuarioId = userId,
+        Evento = "OrdemAprovada",
+        Descricao = $"Ordem {ordem.Id} aprovada",
+        DataHora = DateTime.UtcNow
+    });
+
+    await db.SaveChangesAsync();
 
     return Results.Ok();
 });
@@ -509,6 +585,15 @@ ordens.MapPatch("/{ordemId:guid}/cancelar", async (Guid ordemId, AppDbContext db
     }
 
     ordem.Status = "cancelada";
+
+    db.LogOperacoes.Add(new LogOperacao
+    {
+        Id = Guid.NewGuid(),
+        UsuarioId = userId,
+        Evento = "OrdemCancelada",
+        Descricao = $"Ordem {ordem.Id} cancelada",
+        DataHora = DateTime.UtcNow
+    });
 
     await db.SaveChangesAsync();
     return Results.Ok();
@@ -632,11 +717,88 @@ ordens.MapPost("/venda/{id:guid}", async (Guid id, OrdemRequestDto request, AppD
         Status = "postada",
         DataHora = DateTime.UtcNow
     });
+
+    var moeda = await db.Moedas.FirstOrDefaultAsync(m => m.Id == request.MoedaId);
+
+    db.LogOperacoes.Add(new LogOperacao
+    {
+        Id = Guid.NewGuid(),
+        UsuarioId = userId,
+        Evento = "OrdemVenda",
+        Descricao = $"Venda de {request.Quantidade.ToString(CultureInfo.InvariantCulture)} {moeda?.Simbolo} postada",
+        DataHora = DateTime.UtcNow
+    });
+
     await db.SaveChangesAsync();
     return Results.Created();
-    
+
 });
 
+
+ordens.MapGet("/minhas", async (AppDbContext db, ClaimsPrincipal user) =>
+{
+    var userIdClaim = user.FindFirstValue(ClaimTypes.NameIdentifier);
+
+    if (string.IsNullOrWhiteSpace(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+        return Results.Unauthorized();
+
+    var carteira = await db.Carteiras.FirstOrDefaultAsync(c => c.UsuarioId == userId);
+
+    if (carteira == null)
+        return Results.NotFound("Carteira não encontrada");
+
+    var minhasOrdens = await db.Ordens
+        .Where(o => o.CarteiraId == carteira.Id || o.CompradorCarteiraId == carteira.Id)
+        .OrderByDescending(o => o.DataHora)
+        .Select(o => new OrdemMinhaResponseDto
+        {
+            Id = o.Id,
+            MoedaId = o.MoedaId,
+            Tipo = o.Tipo,
+            Quantidade = o.Quantidade,
+            PrecoUnitarioBrl = o.PrecoUnitarioBrl,
+            Status = o.Status,
+            // comprador P2P fica no CompradorCarteiraId; nos demais casos o papel segue o Tipo da ordem
+            Papel = o.CompradorCarteiraId == carteira.Id ? "Comprador"
+                    : (o.Tipo == "Venda" ? "Vendedor" : "Comprador"),
+            DataHora = o.DataHora
+        })
+        .ToListAsync();
+
+    return Results.Ok(minhasOrdens);
+});
+
+carteiras.MapGet("/", async (AppDbContext db, ClaimsPrincipal user) =>
+{
+    var userIdClaim = user.FindFirstValue(ClaimTypes.NameIdentifier);
+
+    if (string.IsNullOrWhiteSpace(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+        return Results.Unauthorized();
+
+    var carteira = await db.Carteiras.FirstOrDefaultAsync(c => c.UsuarioId == userId);
+
+    if (carteira == null)
+        return Results.NotFound("Carteira não encontrada");
+
+    var saldos = await db.SaldoCriptos
+        .Where(s => s.CarteiraId == carteira.Id)
+        .Select(s => new SaldoCriptoResponseDto
+        {
+            MoedaId = s.MoedaId,
+            Simbolo = s.Moeda!.Simbolo,
+            Nome = s.Moeda.Nome,
+            Quantidade = s.Quantidade
+        })
+        .ToListAsync();
+
+    var response = new CarteiraSaldoResponseDto
+    {
+        SaldoBrl = carteira.SaldoBrl,
+        Saldos = saldos
+    };
+
+    return Results.Ok(response);
+});
 
 app.UseAuthentication();
 app.UseAuthorization();
